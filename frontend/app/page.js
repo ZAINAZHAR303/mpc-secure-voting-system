@@ -1,65 +1,134 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 
 export default function Home() {
+  const [voterId, setVoterId] = useState("");
+  const [token, setToken] = useState("");
+  const [vote, setVote] = useState(1);
+  const [message, setMessage] = useState("");
+
+  const apiBase = "http://localhost:8000";
+
+  async function requestToken() {
+    if (!voterId) return setMessage("Enter voter id first");
+    try {
+      const res = await fetch(`${apiBase}/ea/issue_token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voter_id: voterId }),
+      });
+      const j = await res.json();
+      if (res.ok) {
+        setToken(j.token);
+        setMessage("Token issued (demo).");
+      } else {
+        setMessage("Error: " + JSON.stringify(j));
+      }
+    } catch (err) {
+      setMessage("Network error requesting token");
+    }
+  }
+
+  function makeShares(secret) {
+    const FIELD = BigInt(2) ** BigInt(61) - BigInt(1);
+    const shares = [];
+    for (let i = 0; i < 2; i++) {
+      const s = BigInt(Math.floor(Math.random() * 1e9));
+      shares.push(s % FIELD);
+    }
+    const sum = shares.reduce((a, b) => (a + b) % FIELD, BigInt(0));
+    const last = (BigInt(secret) - sum + FIELD) % FIELD;
+    shares.push(last);
+    return shares;
+  }
+
+  async function sha256Hex(text) {
+    const enc = new TextEncoder();
+    const data = enc.encode(text);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function submitVote() {
+    if (!token) return setMessage("Request token first");
+    try {
+      const sharesBig = makeShares(vote);
+      const shares = sharesBig.map(s => Number(s % BigInt(Number.MAX_SAFE_INTEGER)));
+      const proof = await sha256Hex(shares.join("|"));
+
+      const commits = [];
+      for (const s of shares) {
+        const r = Math.random().toString(36).slice(2, 12);
+        commits.push(await sha256Hex(String(s) + r));
+      }
+
+      const payload = {
+        token: token,
+        voter_id: voterId,
+        shares,
+        commits,
+        proof,
+      };
+
+      const res = await fetch(`${apiBase}/vote/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (res.ok) setMessage("Vote submitted: " + JSON.stringify(j));
+      else setMessage("Error: " + JSON.stringify(j));
+    } catch (err) {
+      setMessage("Network error submitting vote");
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={{ padding: 20 }}>
+      <h1>MPC Voting Demo - Frontend</h1>
+      <div style={{ marginBottom: 10 }}>
+        <label>
+          Voter ID:{" "}
+          <input
+            value={voterId}
+            onChange={e => setVoterId(e.target.value)}
+          />
+        </label>
+        <button onClick={requestToken} style={{ marginLeft: 10 }}>
+          Request Token
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <div>
+          Issued Token:{" "}
+          <code style={{ wordBreak: "break-all" }}>{token}</code>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <label>
+          Vote:
+          <select
+            value={vote}
+            onChange={e => setVote(Number(e.target.value))}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            <option value={0}>0 (No)</option>
+            <option value={1}>1 (Yes)</option>
+          </select>
+        </label>
+        <button onClick={submitVote} style={{ marginLeft: 10 }}>
+          Submit Vote
+        </button>
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <a href="/tally">View tally & bulletin board 	</a>
+      </div>
+
+      <div style={{ marginTop: 20, color: "green" }}>{message}</div>
     </div>
   );
 }
