@@ -12,12 +12,21 @@ blind signatures, TLS, and distributed triple generation for production use.
 """
 
 from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import secrets, hashlib, hmac, time, json
 from itsdangerous import TimestampSigner
 
 app = FastAPI(title="MPC Voting Prototype")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------- Configuration (demo) ----------
 NUM_AUTHORITIES = 3
