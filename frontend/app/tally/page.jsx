@@ -51,11 +51,12 @@ export default function TallyPage() {
               style={{
                 maxHeight: 360,
                 overflow: "auto",
-                background: "#020617",
+                background: "#f9fafb",
                 padding: 10,
                 borderRadius: "0.75rem",
-                border: "1px solid rgba(30,64,175,0.8)",
+                border: "1px solid rgba(148,163,184,0.9)",
                 fontSize: "0.75rem",
+                color: "#111827",
               }}
             >
               {board
@@ -68,11 +69,12 @@ export default function TallyPage() {
             <div className="panel-title">Reconstruction / verification</div>
             <pre
               style={{
-                background: "#020617",
+                background: "#f9fafb",
                 padding: 10,
                 borderRadius: "0.75rem",
-                border: "1px solid rgba(30,64,175,0.8)",
+                border: "1px solid rgba(148,163,184,0.9)",
                 fontSize: "0.8rem",
+                color: "#111827",
               }}
             >
               {verify
