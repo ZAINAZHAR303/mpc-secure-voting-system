@@ -7,11 +7,17 @@ export default function Home() {
   const [token, setToken] = useState("");
   const [vote, setVote] = useState(1);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const apiBase = "http://localhost:8000";
 
   async function requestToken() {
-    if (!voterId) return setMessage("Enter voter id first");
+    setError("");
+    setMessage("");
+    if (!voterId) {
+      setError("Enter voter id first");
+      return;
+    }
     try {
       const res = await fetch(`${apiBase}/ea/issue_token`, {
         method: "POST",
@@ -23,10 +29,11 @@ export default function Home() {
         setToken(j.token);
         setMessage("Token issued (demo).");
       } else {
-        setMessage("Error: " + JSON.stringify(j));
+        setError("Error requesting token");
+        setMessage(JSON.stringify(j));
       }
     } catch (err) {
-      setMessage("Network error requesting token");
+      setError("Network error requesting token");
     }
   }
 
@@ -52,7 +59,12 @@ export default function Home() {
   }
 
   async function submitVote() {
-    if (!token) return setMessage("Request token first");
+    setError("");
+    setMessage("");
+    if (!token) {
+      setError("Request a token before submitting a vote.");
+      return;
+    }
     try {
       const sharesBig = makeShares(vote);
       const shares = sharesBig.map(s => Number(s % BigInt(Number.MAX_SAFE_INTEGER)));
@@ -78,57 +90,107 @@ export default function Home() {
         body: JSON.stringify(payload),
       });
       const j = await res.json();
-      if (res.ok) setMessage("Vote submitted: " + JSON.stringify(j));
-      else setMessage("Error: " + JSON.stringify(j));
+      if (res.ok) {
+        setMessage("Vote submitted successfully.");
+      } else {
+        setError("Error submitting vote");
+        setMessage(JSON.stringify(j));
+      }
     } catch (err) {
-      setMessage("Network error submitting vote");
+      setError("Network error submitting vote");
     }
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>MPC Voting Demo - Frontend</h1>
-      <div style={{ marginBottom: 10 }}>
-        <label>
-          Voter ID:{" "}
-          <input
-            value={voterId}
-            onChange={e => setVoterId(e.target.value)}
-          />
-        </label>
-        <button onClick={requestToken} style={{ marginLeft: 10 }}>
-          Request Token
-        </button>
-      </div>
+    <div className="app-shell">
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="card-title">MPC Secure Voting Demo</div>
+            <div className="card-subtitle">
+              Cast a private yes/no vote. Authorities only ever see masked
+              shares.
+            </div>
+          </div>
+          <div className="pill">3-authority additive sharing · demo only</div>
+        </div>
 
-      <div style={{ marginBottom: 10 }}>
-        <div>
-          Issued Token:{" "}
-          <code style={{ wordBreak: "break-all" }}>{token}</code>
+        <div className="grid-two">
+          <div className="panel">
+            <div className="panel-title">1. Voter identity &amp; token</div>
+            <div className="field-group">
+              <div className="field-label">Voter identifier</div>
+              <div className="field-input-row">
+                <input
+                  className="input"
+                  placeholder="e.g. alice-01"
+                  value={voterId}
+                  onChange={e => setVoterId(e.target.value)}
+                />
+                <button className="button-primary" onClick={requestToken}>
+                  Request token
+                </button>
+              </div>
+            </div>
+
+            <div className="field-group">
+              <div className="field-label">Issued token (one-time use)</div>
+              <div className="token-box">
+                {token || "Token will appear here once issued"}
+              </div>
+              <div className="meta-row">
+                <span>Issued by the Election Authority (EA).</span>
+                <span>Not blind-signed in this demo.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-title">2. Prepare and submit vote</div>
+            <div className="field-group">
+              <div className="field-label">Vote choice</div>
+              <div className="field-input-row">
+                <select
+                  className="select"
+                  value={vote}
+                  onChange={e => setVote(Number(e.target.value))}
+                >
+                  <option value={0}>0 — No</option>
+                  <option value={1}>1 — Yes</option>
+                </select>
+                <button className="button-primary" onClick={submitVote}>
+                  Submit vote
+                </button>
+              </div>
+            </div>
+
+            <div className="card-subtitle">
+              Under the hood, your vote is split into 3 random shares and
+              sent to separate authorities. No single authority ever sees your
+              raw vote.
+            </div>
+          </div>
+        </div>
+
+        {(error || message) && (
+          <div className={"status-bar" + (error ? " error" : "")}> 
+            {error ? <strong>{error}</strong> : null}
+            {message && (
+              <div style={{ marginTop: error ? 4 : 0 }}>{message}</div>
+            )}
+          </div>
+        )}
+
+        <div className="footer-row">
+          <div>
+            <span style={{ color: "#9ca3af" }}>Next step:</span>{" "}
+            <a href="/tally" className="link-pill">
+              View public bulletin board &amp; tally →
+            </a>
+          </div>
+          <div>Field: 2^61 − 1 · Z / additive sharing (demo)</div>
         </div>
       </div>
-
-      <div style={{ marginBottom: 10 }}>
-        <label>
-          Vote:
-          <select
-            value={vote}
-            onChange={e => setVote(Number(e.target.value))}
-          >
-            <option value={0}>0 (No)</option>
-            <option value={1}>1 (Yes)</option>
-          </select>
-        </label>
-        <button onClick={submitVote} style={{ marginLeft: 10 }}>
-          Submit Vote
-        </button>
-      </div>
-
-      <div style={{ marginTop: 20 }}>
-        <a href="/tally">View tally & bulletin board 	</a>
-      </div>
-
-      <div style={{ marginTop: 20, color: "green" }}>{message}</div>
     </div>
   );
 }
