@@ -9,7 +9,7 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const apiBase = "http://localhost:8000";
+  const apiBase = "https://mpc-secure-voting-system-1.onrender.com";
 
   async function requestToken() {
     setError("");
