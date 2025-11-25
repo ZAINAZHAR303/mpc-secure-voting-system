@@ -7,7 +7,7 @@ export default function TallyPage() {
   const [verify, setVerify] = useState(null);
   const [error, setError] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const apiBase = "http://localhost:8000";
+  const apiBase = "https://mpc-secure-voting-system-1.onrender.com";
 
   useEffect(() => {
     async function load() {
