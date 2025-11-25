@@ -22,10 +22,7 @@ app = FastAPI(title="MPC Voting Prototype")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # local dev frontend
-        "https://mpc-secure-voting-system-1.onrender.com",  # backend itself (if ever called from browser)
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
